@@ -21,15 +21,23 @@ import chalk from 'chalk';
  * @returns {boolean} - True if Bedrock credentials are configured
  */
 export function isBedrockEnabled() {
-  // Check for explicit Bedrock enablement or presence of AWS credentials
+  // Check for explicit Bedrock enablement
   const explicitlyEnabled = process.env.USE_BEDROCK === 'true' || process.env.BEDROCK_ENABLED === 'true';
-  const hasCredentials = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
   
-  // Also check that Anthropic credentials are NOT set (to avoid confusion)
+  // Check for NEW Bedrock API Key (simpler method, introduced July 2025)
+  const hasBedrockApiKey = !!process.env.BEDROCK_API_KEY;
+  
+  // Check for traditional AWS credentials
+  const hasAwsCredentials = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
+  
+  // Check that Anthropic credentials are NOT set (to avoid confusion)
   const hasAnthropicCreds = !!(process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_CODE_OAUTH_TOKEN);
   
-  // Enable Bedrock if explicitly enabled OR if AWS creds exist but Anthropic creds don't
-  return explicitlyEnabled || (hasCredentials && !hasAnthropicCreds);
+  // Enable Bedrock if:
+  // 1. Explicitly enabled, OR
+  // 2. Has Bedrock API key but no Anthropic creds, OR
+  // 3. Has AWS creds but no Anthropic creds
+  return explicitlyEnabled || (hasBedrockApiKey && !hasAnthropicCreds) || (hasAwsCredentials && !hasAnthropicCreds);
 }
 
 /**
@@ -64,22 +72,41 @@ export function getBedrockModelId(anthropicModel) {
  */
 function createBedrockClient() {
   const region = process.env.AWS_REGION || 'us-east-1';
+  const bedrockApiKey = process.env.BEDROCK_API_KEY;
   const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
   const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
   const sessionToken = process.env.AWS_SESSION_TOKEN;
 
-  if (!accessKeyId || !secretAccessKey) {
-    throw new Error('AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set to use Bedrock');
+  // Method 1: Use new Bedrock API Key (simpler, introduced July 2025)
+  if (bedrockApiKey) {
+    return new BedrockRuntimeClient({
+      region,
+      credentials: {
+        // Bedrock API keys work through a custom credential provider
+        accessKeyId: bedrockApiKey,
+        secretAccessKey: bedrockApiKey, // API key is used for both
+        sessionToken: undefined
+      }
+    });
   }
 
-  return new BedrockRuntimeClient({
-    region,
-    credentials: {
-      accessKeyId,
-      secretAccessKey,
-      ...(sessionToken && { sessionToken })
-    }
-  });
+  // Method 2: Use traditional AWS credentials
+  if (accessKeyId && secretAccessKey) {
+    return new BedrockRuntimeClient({
+      region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+        ...(sessionToken && { sessionToken })
+      }
+    });
+  }
+
+  throw new Error(
+    'Bedrock authentication required. Set one of:\n' +
+    '  - BEDROCK_API_KEY (simple, recommended)\n' +
+    '  - AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY (traditional)'
+  );
 }
 
 /**
@@ -353,15 +380,33 @@ export function createBedrockQueryFunction() {
  * @throws {Error} - If configuration is invalid
  */
 export function validateBedrockConfig() {
-  if (!process.env.AWS_ACCESS_KEY_ID) {
-    throw new Error('AWS_ACCESS_KEY_ID environment variable is required for Bedrock');
-  }
-  
-  if (!process.env.AWS_SECRET_ACCESS_KEY) {
-    throw new Error('AWS_SECRET_ACCESS_KEY environment variable is required for Bedrock');
+  const bedrockApiKey = process.env.BEDROCK_API_KEY;
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+  const region = process.env.AWS_REGION || 'us-east-1';
+
+  // Check for new Bedrock API Key (preferred method)
+  if (bedrockApiKey) {
+    console.log(chalk.green(`✅ Bedrock configuration valid (API Key, Region: ${region})`));
+    return;
   }
 
-  const region = process.env.AWS_REGION || 'us-east-1';
-  console.log(chalk.green(`✅ Bedrock configuration valid (Region: ${region})`));
+  // Check for traditional AWS credentials
+  if (accessKeyId && secretAccessKey) {
+    console.log(chalk.green(`✅ Bedrock configuration valid (AWS Credentials, Region: ${region})`));
+    return;
+  }
+
+  // No valid credentials found
+  throw new Error(
+    'Bedrock authentication required. Set one of:\n' +
+    '  Option 1 (Recommended): BEDROCK_API_KEY="your-bedrock-api-key"\n' +
+    '  Option 2 (Traditional): AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY\n\n' +
+    'To generate a Bedrock API key:\n' +
+    '  1. Go to AWS Console → IAM → Users\n' +
+    '  2. Select your user → Security credentials\n' +
+    '  3. Find "API keys for Amazon Bedrock" section\n' +
+    '  4. Click "Generate API Key"'
+  );
 }
 

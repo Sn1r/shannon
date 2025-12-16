@@ -144,11 +144,15 @@ ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
 # For Anthropic Claude:
 #   - ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN
 #   - CLAUDE_CODE_MAX_OUTPUT_TOKENS (optional, default: 64000)
-# For AWS Bedrock:
+# For AWS Bedrock (Option 1 - Recommended):
+#   - BEDROCK_API_KEY (simple API key, introduced July 2025)
+#   - AWS_REGION (optional, default: us-east-1)
+# For AWS Bedrock (Option 2 - Traditional):
 #   - AWS_ACCESS_KEY_ID (required)
 #   - AWS_SECRET_ACCESS_KEY (required)
 #   - AWS_REGION (optional, default: us-east-1)
 #   - AWS_SESSION_TOKEN (optional, for temporary credentials)
+# For both Bedrock options:
 #   - BEDROCK_MODEL_ID (optional, default: us.anthropic.claude-sonnet-4-20250514-v1:0)
 
 

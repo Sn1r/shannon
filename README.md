@@ -122,20 +122,31 @@ Shannon can use AWS Bedrock's Claude models as an alternative to direct Anthropi
 **Requirements:**
 1. AWS account with Bedrock access enabled
 2. Claude models enabled in Bedrock (via AWS Console → Bedrock → Model Access)
-3. AWS credentials (Access Key ID and Secret Access Key)
+3. Bedrock API Key (recommended) OR AWS credentials
 
-**Setup:**
+**Setup (Simple - Recommended):**
 ```bash
-# Set AWS credentials
+# Using new Bedrock API Key (introduced July 2025)
+export BEDROCK_API_KEY="your-bedrock-api-key"
+export AWS_REGION="us-east-1"  # Optional, defaults to us-east-1
+```
+
+**Setup (Traditional - AWS Credentials):**
+```bash
+# Using AWS Access Keys (still supported)
 export AWS_ACCESS_KEY_ID="your-access-key-id"
 export AWS_SECRET_ACCESS_KEY="your-secret-access-key"
 export AWS_REGION="us-east-1"  # Optional, defaults to us-east-1
-
-# Optional: Specify a specific Bedrock model
-export BEDROCK_MODEL_ID="us.anthropic.claude-sonnet-4-20250514-v1:0"
 ```
 
-Shannon automatically detects and uses Bedrock when AWS credentials are present and Anthropic credentials are not set.
+**How to Generate a Bedrock API Key:**
+1. Go to AWS Console → IAM → Users
+2. Select your user → Security credentials tab
+3. Scroll to "API keys for Amazon Bedrock" section
+4. Click "Generate API Key" and set expiration
+5. Copy the API key (shown only once)
+
+Shannon automatically detects and uses Bedrock when configured.
 
 > [!TIP]
 > **For detailed Bedrock setup instructions, troubleshooting, and best practices**, see the [AWS Bedrock Integration Guide](./BEDROCK-INTEGRATION.md).
@@ -227,7 +238,24 @@ docker run --rm -it \
       --config /app/configs/example-config.yaml
 ```
 
-**With AWS Bedrock:**
+**With AWS Bedrock (Simple API Key):**
+
+```bash
+docker run --rm -it \
+      --network host \
+      --cap-add=NET_RAW \
+      --cap-add=NET_ADMIN \
+      -e BEDROCK_API_KEY="$BEDROCK_API_KEY" \
+      -e AWS_REGION="us-east-1" \
+      -v "$(pwd)/repos:/app/repos" \
+      -v "$(pwd)/configs:/app/configs" \
+      shannon:latest \
+      "https://your-app.com/" \
+      "/app/repos/your-app" \
+      --config /app/configs/example-config.yaml
+```
+
+**With AWS Bedrock (Traditional AWS Credentials):**
 
 ```bash
 docker run --rm -it \
