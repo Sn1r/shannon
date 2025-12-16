@@ -53,16 +53,18 @@ export function getBedrockModelId(anthropicModel) {
   }
 
   // Map Anthropic model names to Bedrock model IDs
+  // Using most widely available models across regions
   const modelMap = {
-    'claude-sonnet-4-5-20250929': 'us.anthropic.claude-sonnet-4-20250514-v1:0',
-    'claude-3-5-sonnet-20241022': 'us.anthropic.claude-3-5-sonnet-20241022-v2:0',
+    'claude-sonnet-4-5-20250929': 'anthropic.claude-3-5-sonnet-20241022-v2:0',
+    'claude-3-5-sonnet-20241022': 'anthropic.claude-3-5-sonnet-20241022-v2:0',
     'claude-3-5-sonnet-20240620': 'anthropic.claude-3-5-sonnet-20240620-v1:0',
     'claude-3-sonnet-20240229': 'anthropic.claude-3-sonnet-20240229-v1:0',
     'claude-3-opus-20240229': 'anthropic.claude-3-opus-20240229-v1:0',
     'claude-3-haiku-20240307': 'anthropic.claude-3-haiku-20240307-v1:0'
   };
 
-  return modelMap[anthropicModel] || 'us.anthropic.claude-sonnet-4-20250514-v1:0';
+  // Default to Claude 3.5 Sonnet (most widely available)
+  return modelMap[anthropicModel] || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
 }
 
 /**
@@ -284,24 +286,18 @@ export function createBedrockQueryFunction() {
       turnCount++;
 
       try {
-        // Prepare Bedrock request
+        // Prepare Bedrock request - ensure proper format
         const request = {
           modelId,
           messages: conversationHistory,
           inferenceConfig: {
             maxTokens: 4096,
-            temperature: 1.0
+            temperature: 1.0  // Use temperature only (can't use both temperature and topP)
           }
         };
 
-        // Add tool configuration if MCP servers are configured
-        if (options.mcpServers && Object.keys(options.mcpServers).length > 0) {
-          // For now, we'll handle basic tool calls
-          // Note: Full MCP integration would require more complex tool translation
-          request.toolConfig = {
-            tools: []
-          };
-        }
+        // Don't add empty toolConfig - causes validation errors
+        // MCP tools would need proper implementation here
 
         // Make request to Bedrock
         const command = new ConverseCommand(request);
