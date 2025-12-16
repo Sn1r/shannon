@@ -9,6 +9,7 @@ import chalk from 'chalk';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { createBedrockQueryFunction, isBedrockEnabled } from './bedrock-provider.js';
 
 import { isRetryableError, getRetryDelay, PentestError } from '../error-handling.js';
 import { ProgressIndicator } from '../progress-indicator.js';
@@ -219,8 +220,18 @@ async function runClaudePrompt(prompt, sourceDir, allowedTools = 'Read', context
     let lastHeartbeat = Date.now();
     const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 
+    // Select query function based on provider configuration
+    const queryFunction = isBedrockEnabled() ? createBedrockQueryFunction() : query;
+    
+    // Log provider being used
+    if (isBedrockEnabled()) {
+      if (!useCleanOutput) {
+        console.log(chalk.blue(`    🔧 Using AWS Bedrock provider (Region: ${process.env.AWS_REGION || 'us-east-1'})`));
+      }
+    }
+
     try {
-      for await (const message of query({ prompt: fullPrompt, options })) {
+      for await (const message of queryFunction({ prompt: fullPrompt, options })) {
         messageCount++;
 
         // Periodic heartbeat for long-running agents (only when loader is disabled)

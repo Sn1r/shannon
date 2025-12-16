@@ -54,6 +54,7 @@ Shannon closes this gap by acting as your on-demand whitebox pentester. It doesn
 - **Code-Aware Dynamic Testing**: Analyzes your source code to intelligently guide its attack strategy, then performs live, browser and command line based exploits on the running application to confirm real-world risk.
 - **Powered by Integrated Security Tools**: Enhances its discovery phase by leveraging leading reconnaissance and testing tools—including **Nmap, Subfinder, WhatWeb, and Schemathesis**—for deep analysis of the target environment.
 - **Parallel Processing for Faster Results**: Get your report faster. The system parallelizes the most time-intensive phases, running analysis and exploitation for all vulnerability types concurrently.
+- **Flexible AI Provider Options**: Choose between direct Anthropic Claude API or AWS Bedrock for Claude access, providing flexibility for enterprise infrastructure requirements.
 
 ## 📦 Product Line
 
@@ -98,12 +99,46 @@ Shannon is available in two editions:
 
 ### Prerequisites
 
-- **Claude Console account with credits** - Required for AI-powered analysis
+- **AI Provider Access** - Choose one:
+  - **Claude Console account with credits** - For direct Anthropic API access
+  - **AWS Account with Bedrock access** - For AWS Bedrock integration
 - **Docker installed** - Primary deployment method
 
 ### Authentication Setup
 
+Shannon supports two AI providers:
+
+#### Option 1: Anthropic Claude API (Default)
+
 You need either a **Claude Code OAuth token** or an **Anthropic API key** to run Shannon. Get your token from the [Anthropic Console](https://console.anthropic.com) and pass it to Docker via the `-e` flag.
+
+#### Option 2: AWS Bedrock
+
+Shannon can use AWS Bedrock's Claude models as an alternative to direct Anthropic API access. This is useful for:
+- Organizations with existing AWS infrastructure
+- Regions where direct Anthropic API access is limited
+- Leveraging AWS credits or enterprise agreements
+
+**Requirements:**
+1. AWS account with Bedrock access enabled
+2. Claude models enabled in Bedrock (via AWS Console → Bedrock → Model Access)
+3. AWS credentials (Access Key ID and Secret Access Key)
+
+**Setup:**
+```bash
+# Set AWS credentials
+export AWS_ACCESS_KEY_ID="your-access-key-id"
+export AWS_SECRET_ACCESS_KEY="your-secret-access-key"
+export AWS_REGION="us-east-1"  # Optional, defaults to us-east-1
+
+# Optional: Specify a specific Bedrock model
+export BEDROCK_MODEL_ID="us.anthropic.claude-sonnet-4-20250514-v1:0"
+```
+
+Shannon automatically detects and uses Bedrock when AWS credentials are present and Anthropic credentials are not set.
+
+> [!TIP]
+> **For detailed Bedrock setup instructions, troubleshooting, and best practices**, see the [AWS Bedrock Integration Guide](./BEDROCK-INTEGRATION.md).
 
 ### Environment Configuration (Recommended)
 
@@ -192,6 +227,24 @@ docker run --rm -it \
       --config /app/configs/example-config.yaml
 ```
 
+**With AWS Bedrock:**
+
+```bash
+docker run --rm -it \
+      --network host \
+      --cap-add=NET_RAW \
+      --cap-add=NET_ADMIN \
+      -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+      -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+      -e AWS_REGION="us-east-1" \
+      -v "$(pwd)/repos:/app/repos" \
+      -v "$(pwd)/configs:/app/configs" \
+      shannon:latest \
+      "https://your-app.com/" \
+      "/app/repos/your-app" \
+      --config /app/configs/example-config.yaml
+```
+
 **Network Capabilities:**
 
 - `--cap-add=NET_RAW` - Enables advanced port scanning with nmap
@@ -203,12 +256,28 @@ docker run --rm -it \
 Docker containers cannot reach `localhost` on your host machine. Use `host.docker.internal` in place of `localhost`:
 
 ```bash
+# With Anthropic API
 docker run --rm -it \
       --add-host=host.docker.internal:host-gateway \
       --cap-add=NET_RAW \
       --cap-add=NET_ADMIN \
       -e CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
       -e CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000 \
+      -v "$(pwd)/repos:/app/repos" \
+      -v "$(pwd)/configs:/app/configs" \
+      shannon:latest \
+      "http://host.docker.internal:3000" \
+      "/app/repos/your-app" \
+      --config /app/configs/example-config.yaml
+
+# With AWS Bedrock
+docker run --rm -it \
+      --add-host=host.docker.internal:host-gateway \
+      --cap-add=NET_RAW \
+      --cap-add=NET_ADMIN \
+      -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+      -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+      -e AWS_REGION="us-east-1" \
       -v "$(pwd)/repos:/app/repos" \
       -v "$(pwd)/configs:/app/configs" \
       shannon:latest \

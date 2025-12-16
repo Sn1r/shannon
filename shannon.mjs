@@ -25,6 +25,7 @@ import { setupLocalRepo } from './src/setup/environment.js';
 // AI and Prompts
 import { runClaudePromptWithRetry } from './src/ai/claude-executor.js';
 import { loadPrompt } from './src/prompts/prompt-manager.js';
+import { isBedrockEnabled, validateBedrockConfig } from './src/ai/bedrock-provider.js';
 
 // Phases
 import { executePreReconPhase } from './src/phases/pre-recon.js';
@@ -82,6 +83,20 @@ async function main(webUrl, repoPath, configPath = null, pipelineTestingMode = f
   if (configPath) {
     console.log(chalk.cyan(`⚙️ Config: ${configPath}`));
   }
+  
+  // Check and display AI provider
+  if (isBedrockEnabled()) {
+    console.log(chalk.cyan(`🤖 AI Provider: AWS Bedrock (Region: ${process.env.AWS_REGION || 'us-east-1'})`));
+    try {
+      validateBedrockConfig();
+    } catch (error) {
+      console.log(chalk.red(`❌ Bedrock configuration error: ${error.message}`));
+      process.exit(1);
+    }
+  } else {
+    console.log(chalk.cyan(`🤖 AI Provider: Anthropic Claude API`));
+  }
+  
   console.log(chalk.gray('─'.repeat(60)));
 
   // Parse configuration if provided

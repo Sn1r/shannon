@@ -140,6 +140,17 @@ ENV SHANNON_DOCKER=true
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
+# AI Provider Configuration (passed via docker run -e flags):
+# For Anthropic Claude:
+#   - ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN
+#   - CLAUDE_CODE_MAX_OUTPUT_TOKENS (optional, default: 64000)
+# For AWS Bedrock:
+#   - AWS_ACCESS_KEY_ID (required)
+#   - AWS_SECRET_ACCESS_KEY (required)
+#   - AWS_REGION (optional, default: us-east-1)
+#   - AWS_SESSION_TOKEN (optional, for temporary credentials)
+#   - BEDROCK_MODEL_ID (optional, default: us.anthropic.claude-sonnet-4-20250514-v1:0)
+
 
 # Set entrypoint
 ENTRYPOINT ["./shannon.mjs"]
